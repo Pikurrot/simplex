@@ -7,6 +7,7 @@ class Simplex:
 	def __init__(self, objective: str, constraints: Iterable):
 		# Parse objective and constraints
 		self.objective = utils.parse_polynomial(objective)
+		self.obj_vars = self.objective[0]
 		self.constraints = [utils.parse_linear_equation(constraint) for constraint in constraints]
 
 		# Convert to equalities
@@ -35,7 +36,7 @@ class Simplex:
 	
 	def solution(self):
 		'''Get the solutions for the current tableau as a dict'''
-		return dict(zip(['t'] + self.basic_vars, self.tableau[:, -1]))
+		return {var: val for var, val in zip(['t'] + self.basic_vars, self.tableau[:, -1]) if var in self.obj_vars + ['t']}
 	
 	def choose_entering(self):
 		'''Choose the entering variable. Returns its column position in the tableau'''
@@ -62,6 +63,16 @@ class Simplex:
 		self.tableau[leaving] = pivot_row / pivot_row[entering]
 		self.basic_vars[leaving - 1] = self.vars[entering]
 
+	def solve(self):
+		'''Solve the linear program. Returns the solution as a dict'''
+		while True:
+			entering = self.choose_entering()
+			if self.tableau[0, entering] >= 0:
+				break
+			leaving = self.choose_leaving(entering)
+			self.pivot_operation(entering, leaving)
+		return self.solution()
+
 	def __str__(self):
 		'''Return a string representation of the tableau'''
 		row_names = ['t'] + self.basic_vars
@@ -85,7 +96,8 @@ def main():
 	)
 
 	simplex = Simplex(objective, constraints)
-	print(simplex.solution())
+	solutions = simplex.solve()
+	print('Solutions:', solutions)
 
 if __name__ == '__main__':
 	main()
