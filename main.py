@@ -1,14 +1,16 @@
 import numpy as np
-import re
 import utils
-from typing import Iterable
+from typing import Union
+import gradio as gr
 
 class Simplex:
-	def __init__(self, objective: str, constraints: Iterable):
+	def __init__(self, objective: str, constraints: Union[str, tuple, list]):
 		# Parse objective and constraints
 		self.objective = utils.parse_polynomial(objective)
 		self.obj_vars = self.objective[0]
-		self.constraints = [utils.parse_linear_equation(constraint) for constraint in constraints]
+		if isinstance(constraints, str):
+			self.constraints = [constraint.strip() for constraint in constraints.split('\n') if constraint.strip()]
+		self.constraints = [utils.parse_linear_equation(constraint) for constraint in self.constraints]
 
 		# Convert to equalities
 		self.objective = utils.convert_to_equality(*self.objective, -1, 't')
@@ -63,7 +65,7 @@ class Simplex:
 		self.tableau[leaving] = pivot_row / pivot_row[entering]
 		self.basic_vars[leaving - 1] = self.vars[entering]
 
-	def solve(self):
+	def solve(self, as_str: bool = False):
 		'''Solve the linear program. Returns the solution as a dict'''
 		while True:
 			entering = self.choose_entering()
@@ -71,6 +73,11 @@ class Simplex:
 				break
 			leaving = self.choose_leaving(entering)
 			self.pivot_operation(entering, leaving)
+		if as_str:
+			string = 'Optimal solution:'
+			for var, val in self.solution().items():
+				string += f'\n{var} = {val}'
+			return string
 		return self.solution()
 
 	def __str__(self):
@@ -88,16 +95,20 @@ class Simplex:
 		return string
 
 def main():
-	objective = 'x + y' # for now just maximize
-	constraints = (
-		'x <= 4',
-		'x + 2y <= 10',
-		'x + y <= 6'
+	iface = gr.Interface(
+		fn = lambda objective, constraints: Simplex(objective, constraints).solve(as_str=True),
+		inputs = [gr.Textbox(lines=1, placeholder='Enter objective function. eg.\nx + y'),
+				gr.Textbox(lines=5, placeholder='Enter constraints (one per line). eg.\nx + y <= 4\nx + 2y <= 10\nx + y <= 6\n')],
+		outputs = gr.Textbox(),
+		title = 'Simplex',
+		description = 'A simple linear programming solver. Only for maximization problems. Only supports = and <= constraints.',
+		examples=[
+			['x + y', 'x <= 4\nx + 2y <= 10\nx + y <= 6'],
+		],
+		allow_flagging='never'
 	)
 
-	simplex = Simplex(objective, constraints)
-	solutions = simplex.solve()
-	print('Solutions:', solutions)
+	iface.launch(inbrowser=True)
 
 if __name__ == '__main__':
 	main()
