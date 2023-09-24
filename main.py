@@ -62,6 +62,20 @@ class Simplex:
 		self.tableau[leaving] = pivot_row / pivot_row[entering]
 		self.basic_vars[leaving - 1] = self.vars[entering]
 
+	def __str__(self):
+		'''Return a string representation of the tableau'''
+		row_names = ['t'] + self.basic_vars
+		col_names = self.vars
+		max_row_name_width = max(map(len, row_names))
+		max_col_name_width = max(map(len, col_names))
+		max_val_width = max(map(len, map(str, self.tableau.ravel())))
+		cell_width = max(max_col_name_width, max_val_width)
+		string = ' ' * (max_row_name_width + 1) + ' '.join([col.center(cell_width) for col in col_names])
+		for row_name, row in zip(row_names, self.tableau):
+			row_str = row_name.ljust(max_row_name_width) + ' ' + ' '.join([str(val).rjust(cell_width) for val in row])
+			string += '\n' + row_str
+		return string
+
 def main():
 	objective = 'x + y' # for now just maximize
 	constraints = (
