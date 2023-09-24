@@ -36,6 +36,31 @@ class Simplex:
 	def solution(self):
 		'''Get the solutions for the current tableau as a dict'''
 		return dict(zip(['t'] + self.basic_vars, self.tableau[:, -1]))
+	
+	def choose_entering(self):
+		'''Choose the entering variable. Returns its column position in the tableau'''
+		# Choose the variable with the most negative coefficient in the objective function row
+		return np.argmin(self.tableau[0, :-1])
+	
+	def choose_leaving(self, entering: np.intp):
+		'''Choose the leaving variable. Returns its row position in the tableau'''
+		# Choose the variable with the smallest ratio: constant / entering variable coefficient
+		entering_col = np.copy(self.tableau[:, entering])
+		entering_col[0] = 0 # ignore the objective function row
+		with np.errstate(divide='ignore', invalid='ignore'):
+			ratios = np.where(entering_col != 0, self.tableau[:, -1] / entering_col, np.inf)
+		return np.argmin(ratios)
+	
+	def pivot_operation(self, entering: np.intp, leaving: np.intp):
+		'''Perform the pivot operation on the tableau'''
+		# Get the pivot row and column
+		pivot_row = self.tableau[leaving]
+		pivot_col = self.tableau[:, entering]
+
+		# Perform the pivot operation
+		self.tableau = self.tableau - np.outer(pivot_col, pivot_row) / pivot_row[entering]
+		self.tableau[leaving] = pivot_row / pivot_row[entering]
+		self.basic_vars[leaving - 1] = self.vars[entering]
 
 def main():
 	objective = 'x + y' # for now just maximize
